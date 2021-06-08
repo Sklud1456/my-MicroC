@@ -237,7 +237,7 @@ and cExpr (e: expr) (varEnv: VarEnv) (funEnv: FunEnv) : instr list =
              | ">" -> [ SWAP; LT ]
              | "<=" -> [ SWAP; LT; NOT ]
              | _ -> raise (Failure "unknown primitive 2"))
-    | Andalso (e1, e2) ->
+    | AndOperator (e1, e2) ->
         let labend = newLabel ()
         let labfalse = newLabel ()
 
@@ -248,7 +248,7 @@ and cExpr (e: expr) (varEnv: VarEnv) (funEnv: FunEnv) : instr list =
                 Label labfalse
                 CSTI 0
                 Label labend ]
-    | Orelse (e1, e2) ->
+    | OrOperator (e1, e2) ->
         let labend = newLabel ()
         let labtrue = newLabel ()
 
@@ -259,7 +259,7 @@ and cExpr (e: expr) (varEnv: VarEnv) (funEnv: FunEnv) : instr list =
                 Label labtrue
                 CSTI 1
                 Label labend ]
-    | Call (f, es) -> callfun f es varEnv funEnv
+    | CallOperator (f, es) -> callfun f es varEnv funEnv
 
 (* Generate code to access variable, dereference pointer or index array.
    The effect of the compiled code is to leave an lvalue on the stack.   *)

@@ -103,7 +103,11 @@ let rec addCST i C =
     | (0, IFNZRO lab :: C1) -> C1
     | (_, IFNZRO lab :: C1) -> addGOTO lab C1
     | _                     -> CSTI i :: C
-            
+        
+let rec addCSTF i C =
+    match (i, C) with
+    | _                     -> (CSTF (System.BitConverter.SingleToInt32Bits(float32(i)))) :: C
+        
 (* ------------------------------------------------------------------- *)
 
 (* Simple environment operations *)
@@ -213,9 +217,9 @@ let rec cStmt stmt (varEnv : VarEnv) (funEnv : FunEnv) (C : instr list) : instr 
           | (BStmt stmt, varEnv) :: sr -> cStmt stmt varEnv funEnv (pass2 sr C)
       pass2 stmtsback (addINCSP(snd varEnv - fdepthend) C)
     | Return None -> 
-      RET (snd varEnv - 1) :: deadcode C
+        RET (snd varEnv - 1) :: deadcode C
     | Return (Some e) -> 
-      cExpr e varEnv funEnv (RET (snd varEnv) :: deadcode C)
+        cExpr e varEnv funEnv (RET (snd varEnv) :: deadcode C)
 
 and bStmtordec stmtOrDec varEnv : bstmtordec * VarEnv =
     match stmtOrDec with 
@@ -245,6 +249,7 @@ and cExpr (e : expr) (varEnv : VarEnv) (funEnv : FunEnv) (C : instr list) : inst
     | Access acc     -> cAccess acc varEnv funEnv (LDI :: C)
     | Assign(acc, e) -> cAccess acc varEnv funEnv (cExpr e varEnv funEnv (STI :: C))
     | CstI i         -> addCST i C
+    | ConstFloat i      -> addCSTF i C
     | Addr acc       -> cAccess acc varEnv funEnv C
     | Prim1(ope, e1) ->
       cExpr e1 varEnv funEnv
@@ -269,7 +274,7 @@ and cExpr (e : expr) (varEnv : VarEnv) (funEnv : FunEnv) (C : instr list) : inst
             | ">"   -> SWAP :: LT :: C
             | "<="  -> SWAP :: LT :: addNOT C
             | _     -> failwith "unknown primitive 2"))
-    | Andalso(e1, e2) ->
+    | AndOperator(e1, e2) ->
       match C with
       | IFZERO lab :: _ ->
          cExpr e1 varEnv funEnv (IFZERO lab :: cExpr e2 varEnv funEnv C)
@@ -284,7 +289,7 @@ and cExpr (e : expr) (varEnv : VarEnv) (funEnv : FunEnv) (C : instr list) : inst
         cExpr e1 varEnv funEnv
           (IFZERO labfalse 
              :: cExpr e2 varEnv funEnv (addJump jumpend C2))
-    | Orelse(e1, e2) -> 
+    | OrOperator(e1, e2) -> 
       match C with
       | IFNZRO lab :: _ -> 
         cExpr e1 varEnv funEnv (IFNZRO lab :: cExpr e2 varEnv funEnv C)
@@ -299,7 +304,7 @@ and cExpr (e : expr) (varEnv : VarEnv) (funEnv : FunEnv) (C : instr list) : inst
         cExpr e1 varEnv funEnv
            (IFNZRO labtrue 
              :: cExpr e2 varEnv funEnv (addJump jumpend C2))
-    | Call(f, es) -> callfun f es varEnv funEnv C
+    | CallOperator(f, es) -> callfun f es varEnv funEnv C
 
 (* Generate code to access variable, dereference pointer or index array: *)
 
