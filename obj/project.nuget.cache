@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "CNkHXKvb68pumAAmxGRmcGzxDCFtdGlhxnWbSUmW7Ay97Y51kT/hwH2ghX5P301vLEhC0h6wIm5EqvL92+z9ig==",
+  "success": true,
+  "projectFilePath": "D:\\skd\\学习\\编译原理\\mymicroc\\microcc.fsproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\ASUS\\.nuget\\packages\\fsharp.core\\5.0.0\\fsharp.core.5.0.0.nupkg.sha512",
+    "C:\\Users\\ASUS\\.nuget\\packages\\fslexyacc\\10.0.0\\fslexyacc.10.0.0.nupkg.sha512",
+    "C:\\Users\\ASUS\\.nuget\\packages\\fslexyacc.runtime\\10.0.0\\fslexyacc.runtime.10.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}
