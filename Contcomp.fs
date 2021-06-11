@@ -92,7 +92,7 @@ let rec addCST i C =
     | (0, ADD        :: C1) -> C1
     | (0, SUB        :: C1) -> C1
     | (0, NOT        :: C1) -> addCST 1 C1
-    | (_, NOT        :: C1) -> addCST 0 C1
+    | (_, NOT        :: C1) -> addCST 1 C1
     | (1, MUL        :: C1) -> C1
     | (1, DIV        :: C1) -> C1
     | (0, EQ         :: C1) -> addNOT C1
@@ -107,6 +107,7 @@ let rec addCST i C =
 let rec addCSTF i C =
     match (i, C) with
     | _                     -> (CSTF (System.BitConverter.SingleToInt32Bits(float32(i)))) :: C
+    //先转换为int32型用于传入虚拟机
         
 (* ------------------------------------------------------------------- *)
 
@@ -134,7 +135,10 @@ type VarEnv = (Var * typ) Env * int
    its return type, and its parameter declarations *)
 
 type Paramdecs = (typ * string) list
+
 type FunEnv = (label * typ option * Paramdecs) Env
+
+type LabelEnv = label list
 
 (* Bind declared variable in varEnv and generate code to allocate it: *)
 
@@ -163,19 +167,7 @@ let bindParams paras (env, fdepth) : VarEnv =
 
 (* Build environments for global variables and global functions *)
 
-let makeGlobalEnvs(topdecs : topdec list) : VarEnv * FunEnv * instr list = 
-    let rec addv decs varEnv funEnv = 
-        match decs with 
-        | [] -> (varEnv, funEnv, [])
-        | dec::decr -> 
-          match dec with
-          | Vardec (typ, x) ->
-            let (varEnv1, code1) = allocate Glovar (typ, x) varEnv
-            let (varEnvr, funEnvr, coder) = addv decr varEnv1 funEnv
-            (varEnvr, funEnvr, code1 @ coder)
-          | Fundec (tyOpt, f, xs, body) ->
-            addv decr varEnv ((f, (newLabel(), tyOpt, xs)) :: funEnv)
-    addv topdecs ([], 0) []
+
     
 (* ------------------------------------------------------------------- *)
 
@@ -187,20 +179,20 @@ let makeGlobalEnvs(topdecs : topdec list) : VarEnv * FunEnv * instr list =
    * C       is the code that follows the code for stmt
 *)
 
-let rec cStmt stmt (varEnv : VarEnv) (funEnv : FunEnv) (C : instr list) : instr list = 
+let rec cStmt stmt (varEnv : VarEnv) (funEnv : FunEnv) (labellist : LabelEnv)(C : instr list) : instr list = 
     match stmt with
     | If(e, stmt1, stmt2) -> 
       let (jumpend, C1) = makeJump C
-      let (labelse, C2) = addLabel (cStmt stmt2 varEnv funEnv C1)
-      cExpr e varEnv funEnv (IFZERO labelse 
-       :: cStmt stmt1 varEnv funEnv (addJump jumpend C2))
+      let (labelse, C2) = addLabel (cStmt stmt2 varEnv funEnv labellist C1)
+      cExpr e varEnv funEnv labellist (IFZERO labelse 
+       :: cStmt stmt1 varEnv funEnv labellist (addJump jumpend C2))
     | While(e, body) ->
       let labbegin = newLabel()
       let (jumptest, C1) = 
-           makeJump (cExpr e varEnv funEnv (IFNZRO labbegin :: C))
-      addJump jumptest (Label labbegin :: cStmt body varEnv funEnv C1)
+           makeJump (cExpr e varEnv funEnv labellist (IFNZRO labbegin :: C))
+      addJump jumptest (Label labbegin :: cStmt body varEnv funEnv labellist C1)
     | Expr e -> 
-      cExpr e varEnv funEnv (addINCSP -1 C) 
+      cExpr e varEnv funEnv labellist (addINCSP -1 C) 
     | Block stmts -> 
       let rec pass1 stmts ((_, fdepth) as varEnv) =
           match stmts with 
@@ -214,20 +206,24 @@ let rec cStmt stmt (varEnv : VarEnv) (funEnv : FunEnv) (C : instr list) : instr 
           match pairs with 
           | [] -> C
           | (BDec code,  varEnv) :: sr -> code @ pass2 sr C
-          | (BStmt stmt, varEnv) :: sr -> cStmt stmt varEnv funEnv (pass2 sr C)
+          | (BStmt stmt, varEnv) :: sr -> cStmt stmt varEnv funEnv labellist (pass2 sr C)
       pass2 stmtsback (addINCSP(snd varEnv - fdepthend) C)
     | Return None -> 
         RET (snd varEnv - 1) :: deadcode C
     | Return (Some e) -> 
-        cExpr e varEnv funEnv (RET (snd varEnv) :: deadcode C)
+        cExpr e varEnv funEnv labellist (RET (snd varEnv) :: deadcode C)
 
 and bStmtordec stmtOrDec varEnv : bstmtordec * VarEnv =
     match stmtOrDec with 
     | Stmt stmt    ->
       (BStmt stmt, varEnv) 
+    | DeclareAndAssign (typ, x, e) ->
+        let (varEnv1, code) = allocate Locvar (typ, x) varEnv
+        (BDec (cAccess (AccVar(x)) varEnv1 [] [] (cExpr e varEnv1 [] [] (STI :: (addINCSP -1 code)))), varEnv1)
     | Dec (typ, x) ->
       let (varEnv1, code) = allocate Locvar (typ, x) varEnv 
       (BDec code, varEnv1)
+    
 
 (* Compiling micro-C expressions: 
 
@@ -244,23 +240,26 @@ and bStmtordec stmtOrDec varEnv : bstmtordec * VarEnv =
    actually achieve this in a different way.
  *)
 
-and cExpr (e : expr) (varEnv : VarEnv) (funEnv : FunEnv) (C : instr list) : instr list =
+and cExpr (e : expr) (varEnv : VarEnv) (funEnv : FunEnv)(labellist : LabelEnv) (C : instr list) : instr list =
     match e with
-    | Access acc     -> cAccess acc varEnv funEnv (LDI :: C)
-    | Assign(acc, e) -> cAccess acc varEnv funEnv (cExpr e varEnv funEnv (STI :: C))
+    | Access acc     -> cAccess acc varEnv funEnv labellist (LDI :: C)
+    | Assign(acc, e) -> cAccess acc varEnv funEnv labellist (cExpr e varEnv funEnv labellist (STI :: C))
     | CstI i         -> addCST i C
     | ConstFloat i      -> addCSTF i C
-    | Addr acc       -> cAccess acc varEnv funEnv C
+    | Addr acc       -> cAccess acc varEnv funEnv labellist C
     | Prim1(ope, e1) ->
-      cExpr e1 varEnv funEnv
+      let rec tmp stat =
+            match stat with
+            | Access (c) -> c
+      cExpr e1 varEnv funEnv labellist
           (match ope with
            | "!"      -> addNOT C
            | "printi" -> PRINTI :: C
            | "printc" -> PRINTC :: C
            | _        -> failwith "unknown primitive 1")
     | Prim2(ope, e1, e2) ->
-      cExpr e1 varEnv funEnv
-        (cExpr e2 varEnv funEnv
+      cExpr e1 varEnv funEnv labellist
+        (cExpr e2 varEnv funEnv labellist
            (match ope with
             | "*"   -> MUL  :: C
             | "+"   -> ADD  :: C
@@ -277,62 +276,80 @@ and cExpr (e : expr) (varEnv : VarEnv) (funEnv : FunEnv) (C : instr list) : inst
     | AndOperator(e1, e2) ->
       match C with
       | IFZERO lab :: _ ->
-         cExpr e1 varEnv funEnv (IFZERO lab :: cExpr e2 varEnv funEnv C)
+         cExpr e1 varEnv funEnv labellist (IFZERO lab :: cExpr e2 varEnv funEnv labellist C)
       | IFNZRO labthen :: C1 -> 
         let (labelse, C2) = addLabel C1
-        cExpr e1 varEnv funEnv
+        cExpr e1 varEnv funEnv labellist
            (IFZERO labelse 
-              :: cExpr e2 varEnv funEnv (IFNZRO labthen :: C2))
+              :: cExpr e2 varEnv funEnv labellist (IFNZRO labthen :: C2))
       | _ ->
         let (jumpend,  C1) = makeJump C
         let (labfalse, C2) = addLabel (addCST 0 C1)
-        cExpr e1 varEnv funEnv
+        cExpr e1 varEnv funEnv labellist
           (IFZERO labfalse 
-             :: cExpr e2 varEnv funEnv (addJump jumpend C2))
+             :: cExpr e2 varEnv funEnv labellist (addJump jumpend C2))
     | OrOperator(e1, e2) -> 
       match C with
       | IFNZRO lab :: _ -> 
-        cExpr e1 varEnv funEnv (IFNZRO lab :: cExpr e2 varEnv funEnv C)
+        cExpr e1 varEnv funEnv labellist (IFNZRO lab :: cExpr e2 varEnv funEnv labellist C)
       | IFZERO labthen :: C1 ->
         let(labelse, C2) = addLabel C1
-        cExpr e1 varEnv funEnv
-           (IFNZRO labelse :: cExpr e2 varEnv funEnv
+        cExpr e1 varEnv funEnv labellist
+           (IFNZRO labelse :: cExpr e2 varEnv funEnv labellist
              (IFZERO labthen :: C2))
       | _ ->
         let (jumpend, C1) = makeJump C
         let (labtrue, C2) = addLabel(addCST 1 C1)
-        cExpr e1 varEnv funEnv
+        cExpr e1 varEnv funEnv labellist
            (IFNZRO labtrue 
-             :: cExpr e2 varEnv funEnv (addJump jumpend C2))
-    | CallOperator(f, es) -> callfun f es varEnv funEnv C
+             :: cExpr e2 varEnv funEnv labellist (addJump jumpend C2))
+    | CallOperator(f, es) -> callfun f es varEnv funEnv labellist C
 
 (* Generate code to access variable, dereference pointer or index array: *)
 
-and cAccess access varEnv funEnv C = 
+and makeGlobalEnvs(topdecs : topdec list) : VarEnv * FunEnv * instr list = 
+    let rec addv decs varEnv funEnv = 
+        match decs with 
+        | [] -> (varEnv, funEnv, [])
+        | dec::decr -> 
+          match dec with
+          | VariableDeclareAndAssign (typ, x, e) -> 
+              let (varEnv1, code1) = allocate Glovar (typ, x) varEnv 
+              let (varEnvr, funEnvr,coder) = addv decr varEnv1 funEnv
+              (varEnvr, funEnvr,code1 @ (cAccess (AccVar(x)) varEnvr funEnvr [] (cExpr e varEnvr funEnvr [] (STI :: (addINCSP -1 coder)))))
+          | Vardec (typ, x) ->
+            let (varEnv1, code1) = allocate Glovar (typ, x) varEnv
+            let (varEnvr, funEnvr, coder) = addv decr varEnv1 funEnv
+            (varEnvr, funEnvr, code1 @ coder)
+          | Fundec (tyOpt, f, xs, body) ->
+            addv decr varEnv ((f, (newLabel(), tyOpt, xs)) :: funEnv)
+    addv topdecs ([], 0) []
+
+and cAccess access varEnv funEnv labellist  C = 
     match access with 
     | AccVar x   ->
       match lookup (fst varEnv) x with
       | Glovar addr, _ -> addCST addr C
       | Locvar addr, _ -> GETBP :: addCST addr (ADD :: C)
     | AccDeref e ->
-      cExpr e varEnv funEnv C
+      cExpr e varEnv funEnv labellist C
     | AccIndex(acc, idx) ->
-      cAccess acc varEnv funEnv (LDI :: cExpr idx varEnv funEnv (ADD :: C))
+      cAccess acc varEnv funEnv labellist (LDI :: cExpr idx varEnv funEnv labellist (ADD :: C))
 
 (* Generate code to evaluate a list es of expressions: *)
 
-and cExprs es varEnv funEnv C = 
+and cExprs es varEnv funEnv labellist C = 
     match es with 
     | []     -> C
-    | e1::er -> cExpr e1 varEnv funEnv (cExprs er varEnv funEnv C)
+    | e1::er -> cExpr e1 varEnv funEnv labellist (cExprs er varEnv funEnv labellist C)
 
 (* Generate code to evaluate arguments es and then call function f: *)
     
-and callfun f es varEnv funEnv C : instr list =
+and callfun f es varEnv funEnv labellist C : instr list =
     let (labf, tyOpt, paramdecs) = lookup funEnv f
     let argc = List.length es
     if argc = List.length paramdecs then
-      cExprs es varEnv funEnv (makeCall argc labf C)
+      cExprs es varEnv funEnv labellist (makeCall argc labf C)
     else
       failwith (f + ": parameter/argument mismatch")
 
@@ -345,13 +362,14 @@ let cProgram (Prog topdecs) : instr list =
         let (labf, _, paras) = lookup funEnv f
         let (envf, fdepthf) = bindParams paras (globalVarEnv, 0)
         let C0 = [RET (List.length paras-1)]
-        let code = cStmt body (envf, fdepthf) funEnv C0
+        let code = cStmt body (envf, fdepthf) funEnv [] C0
         Label labf :: code
     let functions = 
         List.choose (function 
                          | Fundec (rTy, name, argTy, body) 
                                     -> Some (compilefun (rTy, name, argTy, body))
-                         | Vardec _ -> None)
+                         | Vardec _ -> None
+                         | VariableDeclareAndAssign _ -> None)
                          topdecs
     let (mainlab, _, mainparams) = lookup funEnv "main"
     let argc = List.length mainparams
