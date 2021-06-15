@@ -25,13 +25,14 @@ let third  (_, _, c) = c
 %token <string> CSTSTRING NAME
 %token <char> CSTCHAR
 
-%token CHAR ELSE IF INT FLOAT NULL PRINT PRINTLN RETURN VOID WHILE
-%token PLUS MINUS TIMES DIV MOD SELFPLUS SELFMINUS
+%token CHAR STRING ELSE IF INT FLOAT NULL PRINT PRINTLN RETURN VOID WHILE SWITCH CASE BREAK DEFAULT  
+%token PLUS MINUS TIMES DIV MOD SELFPLUS SELFMINUS 
 %token EQ NE GT LT GE LE
 %token NOT SEQOR SEQAND
 %token LPAR RPAR LBRACE RBRACE LBRACK RBRACK SEMI COMMA ASSIGN AMP QUEST COLON  
 %token EOF
 //quest 问号,colon 冒号 selfpuls selfminus 自增自减
+// LPAR RPAR 左右小括号 LBRACE RBRACE 左右大括号 LBRACK RBRACK 左右方括号
 
 %right ASSIGN             /* lowest precedence */  // 最下面的优先级最高
 %nonassoc PRINT
@@ -148,12 +149,20 @@ Stmt:
 ;
 
 StmtM:  /* No unbalanced if-else */
-    Expr SEMI                           { Expr($1)             }
-  | RETURN SEMI                         { Return None          }
-  | RETURN Expr SEMI                    { Return(Some($2))     }
-  | Block                               { $1                   }
-  | IF LPAR Expr RPAR StmtM ELSE StmtM  { If($3, $5, $7)       }
-  | WHILE LPAR Expr RPAR StmtM          { While($3, $5)        }
+    Expr SEMI                                           { Expr($1)             }
+  | RETURN SEMI                                         { Return None          }
+  | RETURN Expr SEMI                                    { Return(Some($2))     }
+  | Block                                               { $1                   }
+  | IF LPAR Expr RPAR StmtM ELSE StmtM                  { If($3, $5, $7)       }
+  | WHILE LPAR Expr RPAR StmtM                          { While($3, $5)        }
+  | SWITCH LPAR Expr RPAR LBRACE StmtCase RBRACE        { Switch($3,$6)        }   
+  | BREAK SEMI                                          { Break                }
+;
+
+StmtCase:
+    CASE AtExprNotAccess COLON StmtM               { [Case($2,$4)]    }  
+  | CASE AtExprNotAccess COLON StmtM StmtCase      { Case($2,$4) :: $5}
+  | DEFAULT COLON StmtM                            { [Default($3)]   } 
 ;
 
 StmtU:
@@ -199,11 +208,12 @@ AtExprNotAccess:
     // Const ,  3
     // AMP Access  , &x
     // (3)   
-    Const                               { CstI $1             }
-  | ConstFloat                          { ConstFloat($1)      }
-  | ConstChar                           { ConstChar($1)      }
-  | LPAR ExprNotAccess RPAR             { $2                  } 
-  | AMP Access                          { Addr $2             } // 取地址
+    Const                               { CstI $1              }
+  | ConstFloat                          { ConstFloat($1)       }
+  | ConstChar                           { ConstChar($1)        }
+  | ConstString                         { ConstString($1)      }
+  | LPAR ExprNotAccess RPAR             { $2                   } 
+  | AMP Access                          { Addr $2              } // 取地址
 ;
 
 Access:    //可以为左值的情况
@@ -238,9 +248,13 @@ ConstFloat:
 ConstChar:
   CSTCHAR                               { $1       }
 
+ConstString:
+  CSTSTRING                             { $1       }
+
 
 Type:
     INT                                 { TypI     }
   | CHAR                                { TypC     }
   | FLOAT                               { TypFloat    }
+  | STRING                              { TypString    }
 ;

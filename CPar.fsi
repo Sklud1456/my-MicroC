@@ -31,6 +31,7 @@ type token =
   | SELFPLUS
   | SELFMINUS
   | CHAR
+  | STRING
   | ELSE
   | IF
   | INT
@@ -41,6 +42,10 @@ type token =
   | RETURN
   | VOID
   | WHILE
+  | SWITCH
+  | CASE
+  | BREAK
+  | DEFAULT
   | CSTCHAR of (char)
   | CSTSTRING of (string)
   | NAME of (string)
@@ -78,6 +83,7 @@ type tokenId =
     | TOKEN_SELFPLUS
     | TOKEN_SELFMINUS
     | TOKEN_CHAR
+    | TOKEN_STRING
     | TOKEN_ELSE
     | TOKEN_IF
     | TOKEN_INT
@@ -88,6 +94,10 @@ type tokenId =
     | TOKEN_RETURN
     | TOKEN_VOID
     | TOKEN_WHILE
+    | TOKEN_SWITCH
+    | TOKEN_CASE
+    | TOKEN_BREAK
+    | TOKEN_DEFAULT
     | TOKEN_CSTCHAR
     | TOKEN_CSTSTRING
     | TOKEN_NAME
@@ -111,6 +121,7 @@ type nonTerminalId =
     | NONTERM_StmtOrDecSeq
     | NONTERM_Stmt
     | NONTERM_StmtM
+    | NONTERM_StmtCase
     | NONTERM_StmtU
     | NONTERM_Expr
     | NONTERM_ExprNotAccess
@@ -121,6 +132,7 @@ type nonTerminalId =
     | NONTERM_Const
     | NONTERM_ConstFloat
     | NONTERM_ConstChar
+    | NONTERM_ConstString
     | NONTERM_Type
 /// This function maps tokens to integer indexes
 val tagOfToken: token -> int

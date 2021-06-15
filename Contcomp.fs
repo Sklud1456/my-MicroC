@@ -167,6 +167,16 @@ let bindParam (env, fdepth) (typ, x) : VarEnv =
 let bindParams paras (env, fdepth) : VarEnv = 
     List.fold bindParam (env, fdepth) paras;
 
+let rec headlab labs = 
+    match labs with
+        | lab :: tr -> lab
+        | []        -> failwith "Error:cant break or unknown break!"
+
+let rec dellab labs =
+    match labs with
+        | lab :: tr ->   tr
+        | []        ->   []
+
 (* ------------------------------------------------------------------- *)
 
 (* Build environments for global variables and global functions *)
@@ -212,6 +222,35 @@ let rec cStmt stmt (varEnv : VarEnv) (funEnv : FunEnv) (labellist : LabelEnv)(C 
           | (BDec code,  varEnv) :: sr -> code @ pass2 sr C
           | (BStmt stmt, varEnv) :: sr -> cStmt stmt varEnv funEnv labellist (pass2 sr C)
       pass2 stmtsback (addINCSP(snd varEnv - fdepthend) C)
+    | Switch(e,cases)   ->
+           let (labend, C1) = addLabel C
+           let labellist = labend :: labellist
+           let rec everycase c  = 
+               match c with
+               | [Case(cond,body)] -> 
+                   let (label,C2) = addLabel(cStmt body varEnv funEnv labellist C1 )
+                   let (label2, C3) = addLabel( cExpr (Prim2 ("==",e,cond)) varEnv funEnv labellist (IFZERO labend :: C2))
+                   (label,label2,C3)
+               | Case(cond,body) :: tr->
+                   let (labnextbody,labnext,C2) = everycase tr
+                   let (label, C3) = addLabel(cStmt body varEnv funEnv labellist (addGOTO labnextbody C2))
+                   let (label2, C4) = addLabel( cExpr (Prim2 ("==",e,cond)) varEnv funEnv labellist (IFZERO labnext :: C3))
+                   (label,label2,C4)
+               | Default(body) :: tr -> 
+                   let (labnextbody,labnext,C2) = everycase tr
+                   let (label, C3) = addLabel(cStmt body varEnv funEnv labellist (addGOTO labnextbody C2))
+                   let (label2, C4) = addLabel( cExpr (Prim2 ("==",e,e)) varEnv funEnv labellist (IFZERO labnext :: C3))
+                   (label,label2,C4)
+               | [] -> (labend, labend,C1)
+           let (label,label2,C2) = everycase cases
+           C2
+    | Case(cond,body)  ->
+           C
+    | Default(body)  ->
+        C
+    | Break ->
+        let labend = headlab labellist
+        addGOTO labend C
     | Return None -> 
         RET (snd varEnv - 1) :: deadcode C
     | Return (Some e) -> 

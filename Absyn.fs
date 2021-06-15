@@ -14,6 +14,7 @@ type typ =
   | TypI                                (* Type int                    *)
   | TypC                                (* Type char                   *)           
   | TypFloat                            (* Type flaot                  *)
+  | TypString                           (* Type string                 *)
   | TypA of typ * int option            (* Array type                  *)
   | TypP of typ                         (* Pointer type                *)
                                                                    
@@ -24,6 +25,7 @@ and expr =                              // 表达式，右值
   | CstI of int                         (* Constant                    *)
   | ConstFloat of float32               (*constant float*)  
   | ConstChar of char                   (*constant char*) 
+  | ConstString of string               (*constant string*) 
   | Prim1 of string * expr              (* Unary primitive operator    *)
   | Prim2 of string * expr * expr       (* Binary primitive operator   *)
   | Prim3 of expr * expr * expr         (* 三目运算符                  *)    
@@ -38,10 +40,14 @@ and access =                         //左值，存储的位置
                                                                    
 and stmt =                                                         
   | If of expr * stmt * stmt         (* Conditional                 *)
+  | Switch of expr * stmt list
+  | Case of expr * stmt
   | While of expr * stmt             (* While loop                  *)
   | Expr of expr                     (* Expression statement   e;   *)
   | Return of expr option            (* Return from method          *)
   | Block of stmtordec list          (* Block: grouping and scope   *)
+  | Break
+  | Default of stmt
   // 语句块内部，可以是变量声明 或语句的列表                                                              
 
   //本地变量声明
