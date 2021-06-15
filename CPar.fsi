@@ -46,6 +46,7 @@ type token =
   | SWITCH
   | CASE
   | BREAK
+  | CONTINUE
   | DEFAULT
   | CSTCHAR of (char)
   | CSTSTRING of (string)
@@ -99,6 +100,7 @@ type tokenId =
     | TOKEN_SWITCH
     | TOKEN_CASE
     | TOKEN_BREAK
+    | TOKEN_CONTINUE
     | TOKEN_DEFAULT
     | TOKEN_CSTCHAR
     | TOKEN_CSTSTRING

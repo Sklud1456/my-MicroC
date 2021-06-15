@@ -26,12 +26,12 @@ and expr =                              // 表达式，右值
   | ConstFloat of float32               (*constant float*)  
   | ConstChar of char                   (*constant char*) 
   | ConstString of string               (*constant string*) 
-  | Prim1 of string * expr              (* Unary primitive operator    *)
-  | Prim2 of string * expr * expr       (* Binary primitive operator   *)
-  | Prim3 of expr * expr * expr         (* 三目运算符                  *)    
-  | AndOperator of expr * expr          (* Sequential and              *)
-  | OrOperator of expr * expr           (* Sequential or               *)
-  | CallOperator of string * expr list  (* Function call f(...)        *)
+  | Prim1 of string * expr              (* Unary primitive operator 单  *)
+  | Prim2 of string * expr * expr       (* Binary primitive operator 双 *)
+  | Prim3 of expr * expr * expr         (* 三目运算符                   *)    
+  | AndOperator of expr * expr          (* Sequential and               *)
+  | OrOperator of expr * expr           (* Sequential or                *)
+  | CallOperator of string * expr list  (* Function call f(...)         *)
                                                                    
 and access =                         //左值，存储的位置                                            
   | AccVar of string                 (* Variable access        x    *) 
@@ -49,6 +49,7 @@ and stmt =
   | Block of stmtordec list          (* Block: grouping and scope   *)
   | Break
   | Default of stmt
+  | Continue
   // 语句块内部，可以是变量声明 或语句的列表                                                              
 
   //本地变量声明
