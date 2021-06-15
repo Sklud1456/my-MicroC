@@ -251,6 +251,17 @@ let rec cStmt stmt (varEnv : VarEnv) (funEnv : FunEnv) (labellist : LabelEnv)(C 
     | Break ->
         let labend = headlab labellist
         addGOTO labend C
+    | For(dec, e, opera,body) ->
+        let labend   = newLabel()                       //结束label
+        let labbegin = newLabel()                       //开始label 
+        let labope   = newLabel()                       //设置 for(,,opera) 的label
+        let labellist = labend :: labope :: labellist
+        let Cend = Label labend :: C
+        let (jumptest, C2) =                                                
+            makeJump (cExpr e varEnv funEnv labellist (IFNZRO labbegin :: Cend)) 
+        let C3 = Label labope :: cExpr opera varEnv funEnv labellist (addINCSP -1 C2)
+        let C4 = cStmt body varEnv funEnv labellist C3    
+        cExpr dec varEnv funEnv labellist (addINCSP -1 (addJump jumptest  (Label labbegin :: C4) ) ) //dec Label: body  opera  testjumpToBegin 指令的顺序
     | Return None -> 
         RET (snd varEnv - 1) :: deadcode C
     | Return (Some e) -> 
