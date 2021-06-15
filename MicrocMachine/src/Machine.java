@@ -38,7 +38,9 @@ class Machine {
     PRINTI = 22, PRINTC = 23, 
     LDARGS = 24,
     STOP = 25,
-    CSTF =26;
+    CSTF =26, 
+    CSTC =27;
+
 
   final static int STACKSIZE = 1000;
   
@@ -89,6 +91,8 @@ class Machine {
           stack[sp + 1] = new IntType(program.get(pc++)); sp++; break;
         case CSTF:
           stack[sp + 1] = new FloatType(Float.intBitsToFloat(program.get(pc++))); sp++; break;
+        case CSTC:
+          stack[sp + 1] = new CharType((char)(program.get(pc++).intValue())); sp++; break;
         case ADD:{
           stack[sp - 1] = binaryOperator(stack[sp-1], stack[sp], "+");
           sp--;
@@ -198,15 +202,17 @@ class Machine {
           Object result;
           if(stack[sp] instanceof IntType){
             result = ((IntType)stack[sp]).getValue();
-          }else{
+          }else if(stack[sp] instanceof FloatType){
             result = ((FloatType)stack[sp]).getValue();
+          }else {
+            result = ((CharType)stack[sp]).getValue();
           }
 
           System.out.print(String.valueOf(result) + " ");
           break;
         }
         case PRINTC:
-          System.out.print((((CharType)stack[sp])).getValue()); break;
+          System.out.print((new CharType(stack[sp])).getValue()); break;
         case LDARGS:
           for (int i=0; i < inputargs.length; i++) // Push commandline arguments
             stack[++sp] = inputargs[i];
@@ -326,6 +332,7 @@ class Machine {
     switch (program.get(pc)) {
       case CSTI:   return "CSTI " + program.get(pc+1);
       case CSTF:   return "CSTF"  + program.get(pc+1);
+      case CSTC:   return "CSTC " + (char)(program.get(pc+1).intValue());
       case ADD:    return "ADD";
       case SUB:    return "SUB";
       case MUL:    return "MUL";

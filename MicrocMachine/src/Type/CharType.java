@@ -11,6 +11,10 @@ public class CharType extends BaseType {
         value = c;
     }
 
+    public CharType(BaseType c){
+        value ='\n';
+    }
+
     public char getValue() {
         return value;
     }

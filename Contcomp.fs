@@ -108,6 +108,10 @@ let rec addCSTF i C =
     match (i, C) with
     | _                     -> (CSTF (System.BitConverter.SingleToInt32Bits(float32(i)))) :: C
     //先转换为int32型用于传入虚拟机
+
+let rec addCSTC i C =
+    match (i, C) with
+    | _                     -> (CSTC ((int32)(System.BitConverter.ToInt16((System.BitConverter.GetBytes(char(i))),0)))) :: C
         
 (* ------------------------------------------------------------------- *)
 
@@ -246,6 +250,7 @@ and cExpr (e : expr) (varEnv : VarEnv) (funEnv : FunEnv)(labellist : LabelEnv) (
     | Assign(acc, e) -> cAccess acc varEnv funEnv labellist (cExpr e varEnv funEnv labellist (STI :: C))
     | CstI i         -> addCST i C
     | ConstFloat i      -> addCSTF i C
+    | ConstChar i      -> addCSTC i C
     | Addr acc       -> cAccess acc varEnv funEnv labellist C
     | Prim1(ope, e1) ->
       let rec tmp stat =

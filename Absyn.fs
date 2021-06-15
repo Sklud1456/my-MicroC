@@ -23,6 +23,7 @@ and expr =                              // 表达式，右值
   | Addr of access                      (* &x   or  &*p   or  &a[e]    *)
   | CstI of int                         (* Constant                    *)
   | ConstFloat of float32               (*constant float*)  
+  | ConstChar of char                   (*constant char*) 
   | Prim1 of string * expr              (* Unary primitive operator    *)
   | Prim2 of string * expr * expr       (* Binary primitive operator   *)
   | AndOperator of expr * expr          (* Sequential and              *)
