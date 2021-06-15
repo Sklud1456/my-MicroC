@@ -12,6 +12,8 @@ type token =
   | COMMA
   | ASSIGN
   | AMP
+  | QUEST
+  | COLON
   | NOT
   | SEQOR
   | SEQAND
@@ -26,6 +28,8 @@ type token =
   | TIMES
   | DIV
   | MOD
+  | SELFPLUS
+  | SELFMINUS
   | CHAR
   | ELSE
   | IF
@@ -55,6 +59,8 @@ type tokenId =
     | TOKEN_COMMA
     | TOKEN_ASSIGN
     | TOKEN_AMP
+    | TOKEN_QUEST
+    | TOKEN_COLON
     | TOKEN_NOT
     | TOKEN_SEQOR
     | TOKEN_SEQAND
@@ -69,6 +75,8 @@ type tokenId =
     | TOKEN_TIMES
     | TOKEN_DIV
     | TOKEN_MOD
+    | TOKEN_SELFPLUS
+    | TOKEN_SELFMINUS
     | TOKEN_CHAR
     | TOKEN_ELSE
     | TOKEN_IF

@@ -261,6 +261,20 @@ and cExpr (e : expr) (varEnv : VarEnv) (funEnv : FunEnv)(labellist : LabelEnv) (
            | "!"      -> addNOT C
            | "printi" -> PRINTI :: C
            | "printc" -> PRINTC :: C
+           | "I++" -> 
+               let ass = Assign (tmp e1,Prim2 ("+",Access (tmp e1),CstI 1))
+               cExpr ass varEnv funEnv labellist (addINCSP -1 C)
+           | "I--" ->
+               let ass = Assign (tmp e1,Prim2 ("-",Access (tmp e1),CstI 1))
+               cExpr ass varEnv funEnv labellist (addINCSP -1 C)
+           | "++I" -> 
+               let ass = Assign (tmp e1,Prim2 ("+",Access (tmp e1),CstI 1))
+               let C1 = cExpr ass varEnv funEnv labellist C
+               CSTI 1 :: ADD :: (addINCSP -1 C1)
+           | "--I" -> 
+               let ass = Assign (tmp e1,Prim2 ("-",Access (tmp e1),CstI 1))
+               let C1 = cExpr ass varEnv funEnv labellist C
+               CSTI 1 :: SUB :: (addINCSP -1 C1)
            | _        -> failwith "unknown primitive 1")
     | Prim2(ope, e1, e2) ->
       cExpr e1 varEnv funEnv labellist
@@ -278,6 +292,10 @@ and cExpr (e : expr) (varEnv : VarEnv) (funEnv : FunEnv)(labellist : LabelEnv) (
             | ">"   -> SWAP :: LT :: C
             | "<="  -> SWAP :: LT :: addNOT C
             | _     -> failwith "unknown primitive 2"))
+    | Prim3(cond, e1, e2)    ->
+        let (jumpend, C1) = makeJump C
+        let (labelse, C2) = addLabel (cExpr e2 varEnv funEnv labellist C1 )
+        cExpr cond varEnv funEnv labellist (IFZERO labelse :: cExpr e1 varEnv funEnv labellist (addJump jumpend C2))  
     | AndOperator(e1, e2) ->
       match C with
       | IFZERO lab :: _ ->

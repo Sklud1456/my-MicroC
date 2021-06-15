@@ -70,6 +70,8 @@ rule Token = parse          // 每个 规则rule 会生成为一个函数，函�
   | '+'             { PLUS }  // 返回Token PLUS 给调用词法分析器的程序，通常是Parser
                               // 此时lexbuf是 匹配 '+'完成后，后续的内容 
   | '-'             { MINUS } 
+  | "++"            { SELFPLUS }
+  | "--"            { SELFMINUS }
   | '*'             { TIMES } 
   | '/'             { DIV } 
   | '%'             { MOD }                     
@@ -90,7 +92,9 @@ rule Token = parse          // 每个 规则rule 会生成为一个函数，函�
   | '}'             { RBRACE }
   | '['             { LBRACK }
   | ']'             { RBRACK }
-  | ';'             { SEMI }
+  | '?'             { QUEST  }
+  | ':'             { COLON  }
+  | ';'             { SEMI   }
   | ','             { COMMA }
   | "//"            { EndLineComment lexbuf; Token lexbuf }  //单行注释处理规则，调用响应处理函数
                                                              //参数是 lexbuf

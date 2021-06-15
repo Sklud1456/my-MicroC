@@ -26,6 +26,7 @@ and expr =                              // 表达式，右值
   | ConstChar of char                   (*constant char*) 
   | Prim1 of string * expr              (* Unary primitive operator    *)
   | Prim2 of string * expr * expr       (* Binary primitive operator   *)
+  | Prim3 of expr * expr * expr         (* 三目运算符                  *)    
   | AndOperator of expr * expr          (* Sequential and              *)
   | OrOperator of expr * expr           (* Sequential or               *)
   | CallOperator of string * expr list  (* Function call f(...)        *)
