@@ -30,6 +30,18 @@ type token =
   | MOD
   | SELFPLUS
   | SELFMINUS
+  | WHILE
+  | DO
+  | FOR
+  | SWITCH
+  | CASE
+  | BREAK
+  | CONTINUE
+  | DEFAULT
+  | TRY
+  | CATCH
+  | THROW
+  | FINALLY
   | CHAR
   | STRING
   | ELSE
@@ -41,13 +53,6 @@ type token =
   | PRINTLN
   | RETURN
   | VOID
-  | WHILE
-  | FOR
-  | SWITCH
-  | CASE
-  | BREAK
-  | CONTINUE
-  | DEFAULT
   | CSTCHAR of (char)
   | CSTSTRING of (string)
   | NAME of (string)
@@ -84,6 +89,18 @@ type tokenId =
     | TOKEN_MOD
     | TOKEN_SELFPLUS
     | TOKEN_SELFMINUS
+    | TOKEN_WHILE
+    | TOKEN_DO
+    | TOKEN_FOR
+    | TOKEN_SWITCH
+    | TOKEN_CASE
+    | TOKEN_BREAK
+    | TOKEN_CONTINUE
+    | TOKEN_DEFAULT
+    | TOKEN_TRY
+    | TOKEN_CATCH
+    | TOKEN_THROW
+    | TOKEN_FINALLY
     | TOKEN_CHAR
     | TOKEN_STRING
     | TOKEN_ELSE
@@ -95,13 +112,6 @@ type tokenId =
     | TOKEN_PRINTLN
     | TOKEN_RETURN
     | TOKEN_VOID
-    | TOKEN_WHILE
-    | TOKEN_FOR
-    | TOKEN_SWITCH
-    | TOKEN_CASE
-    | TOKEN_BREAK
-    | TOKEN_CONTINUE
-    | TOKEN_DEFAULT
     | TOKEN_CSTCHAR
     | TOKEN_CSTSTRING
     | TOKEN_NAME
@@ -126,6 +136,8 @@ type nonTerminalId =
     | NONTERM_Stmt
     | NONTERM_StmtM
     | NONTERM_StmtCase
+    | NONTERM_StmtCatch
+    | NONTERM_EXCEPTION
     | NONTERM_StmtU
     | NONTERM_Expr
     | NONTERM_ExprNotAccess

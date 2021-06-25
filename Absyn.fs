@@ -43,6 +43,7 @@ and stmt =
   | Switch of expr * stmt list
   | Case of expr * stmt
   | While of expr * stmt             (* While loop                  *)
+  | Dowhile of stmt * expr           (* Dowhile loop                  *)
   | For of expr * expr * expr * stmt (* For loop                    *)
   | Expr of expr                     (* Expression statement   e;   *)
   | Return of expr option            (* Return from method          *)
@@ -50,6 +51,14 @@ and stmt =
   | Break
   | Default of stmt
   | Continue
+  | Try of stmt * stmt list
+  | Catch of IException * stmt
+  | Finally of stmt
+  | Throw of expr
+  | Expression of expr
+
+and IException = 
+    | Exception of string  
   // 语句块内部，可以是变量声明 或语句的列表                                                              
 
   //本地变量声明

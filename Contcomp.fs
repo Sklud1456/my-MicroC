@@ -205,6 +205,11 @@ let rec cStmt stmt (varEnv : VarEnv) (funEnv : FunEnv) (labellist : LabelEnv)(C 
       let (jumptest, C1) = 
            makeJump (cExpr e varEnv funEnv labellist (IFNZRO labbegin :: C))
       addJump jumptest (Label labbegin :: cStmt body varEnv funEnv labellist C1)
+    | Dowhile(body, e) ->
+        let labelbegin = newLabel()
+        let C1 = 
+            cExpr e varEnv funEnv labellist (IFNZRO labelbegin :: C)
+        Label labelbegin :: cStmt body varEnv funEnv labellist C1 //先执行body
     | Expr e -> 
       cExpr e varEnv funEnv labellist (addINCSP -1 C) 
     | Block stmts -> 
@@ -236,6 +241,10 @@ let rec cStmt stmt (varEnv : VarEnv) (funEnv : FunEnv) (labellist : LabelEnv)(C 
                    let (label, C3) = addLabel(cStmt body varEnv funEnv labellist (addGOTO labnextbody C2))
                    let (label2, C4) = addLabel( cExpr (Prim2 ("==",e,cond)) varEnv funEnv labellist (IFZERO labnext :: C3))
                    (label,label2,C4)
+               | [Default(body)] -> 
+                   let (label,C2) = addLabel(cStmt body varEnv funEnv labellist C1 )
+                   let (label2, C3) = addLabel( cExpr (Prim2 ("==",e,e)) varEnv funEnv labellist (IFZERO labend :: C2))
+                   (label,label2,C3)
                | Default(body) :: tr -> 
                    let (labnextbody,labnext,C2) = everycase tr
                    let (label, C3) = addLabel(cStmt body varEnv funEnv labellist (addGOTO labnextbody C2))
@@ -266,11 +275,67 @@ let rec cStmt stmt (varEnv : VarEnv) (funEnv : FunEnv) (labellist : LabelEnv)(C 
         let C3 = Label labelope :: cExpr opera varEnv funEnv labellist (addINCSP -1 C2)
         let C4 = cStmt body varEnv funEnv labellist C3    
         cExpr dec varEnv funEnv labellist (addINCSP -1 (addJump jumptest  (Label labelbegin :: C4) ) ) //dec Label: body  opera  testjumpToBegin 指令的顺序
+    | Try(stmt,catchs)  ->
+        let exns = [Exception "ArithmeticalExcption"]
+        let rec lookupExn e1 (es:IException list) exdepth=
+            match es with
+            | hd :: tail -> if e1 = hd then exdepth else lookupExn e1 tail exdepth+1
+            | []-> -1
+        let (labelend, C1) = addLabel C
+        let labellist = labelend :: labellist
+        let (env,fdepth) = varEnv
+        let varEnv = (env,fdepth+3*catchs.Length)
+        let (tryins,varEnv) = tryStmt stmt varEnv funEnv labellist []
+        let rec everycatch c  = 
+            match c with
+            | [Catch(exn,body)] -> 
+                let exnum = lookupExn exn exns 1
+                let (label, Ccatch) = addLabel( cStmt body varEnv funEnv labellist [])
+                let Ctry = PUSHHDLR (exnum ,label) :: tryins @ [POPHDLR]
+                (Ccatch,Ctry)
+            | Catch(exn,body) :: tr->
+                let exnum = lookupExn exn exns 1
+                let (C2,C3) = everycatch tr
+                let (label, Ccatch) = addLabel( cStmt body varEnv funEnv labellist C2)
+                let Ctry = PUSHHDLR (exnum,label) :: C3 @ [POPHDLR]
+                (Ccatch,Ctry)
+            | [Finally(body)] -> 
+                let exnum = 0
+                let (label, Cfinally) = addLabel( cStmt body varEnv funEnv labellist [STOP])
+                let Ctry = PUSHHDLR (exnum,label) :: tryins @ [STOP] @ [POPHDLR]
+                (Cfinally,Ctry)
+            | [] -> ([],tryins)
+        let (Ccatch,Ctry) = everycatch catchs
+        Ctry @ Ccatch @ C1
+
+    | Catch(exn,body)       ->
+        C
+    | Finally(body)       ->
+        C
+    | Expression e ->
+        cExpr e varEnv funEnv labellist (addINCSP -1 C)
     | Return None -> 
         RET (snd varEnv - 1) :: deadcode C
     | Return (Some e) -> 
         cExpr e varEnv funEnv labellist (RET (snd varEnv) :: deadcode C)
 
+and tryStmt tryBlock (varEnv : VarEnv) (funEnv : FunEnv) (labellist : LabelEnv) (C : instr list) : instr list * VarEnv = 
+    match tryBlock with
+    | Block stmts ->
+        let rec pass1 stmts ((_, fdepth) as varEnv) = 
+            match stmts with
+            | []        -> ([], fdepth,varEnv)
+            | s1::sr    ->
+                let (_, varEnv1) as res1 = bStmtordec s1 varEnv 
+                let (resr, fdepthr,varEnv2) = pass1 sr varEnv1
+                (res1 :: resr, fdepthr,varEnv2)
+        let (stmtsback, fdepthend,varEnv1) = pass1 stmts varEnv
+        let rec pass2 pairs C =
+            match pairs with
+            | [] -> C            
+            | (BDec code, varEnv)  :: sr -> code @ pass2 sr C
+            | (BStmt stmt, varEnv) :: sr -> cStmt stmt varEnv funEnv labellist (pass2 sr C)
+        (pass2 stmtsback (addINCSP(snd varEnv - fdepthend) C),varEnv1)
 and bStmtordec stmtOrDec varEnv : bstmtordec * VarEnv =
     match stmtOrDec with 
     | Stmt stmt    ->

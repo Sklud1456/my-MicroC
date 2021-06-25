@@ -13,6 +13,7 @@
 */
 
 import Type.*;
+import Exception.*;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
@@ -25,7 +26,6 @@ class Machine {
     else
       execute(args, false);
   }
-
   // These numeric instruction codes must agree with Machine.fs:
 
   final static int 
@@ -39,7 +39,8 @@ class Machine {
     LDARGS = 24,
     STOP = 25,
     CSTF =26, 
-    CSTC =27;
+    CSTC =27,
+    THROW = 28,PUSHHR = 29,POPHR = 30;
 
 
   final static int STACKSIZE = 1000;
@@ -83,6 +84,7 @@ class Machine {
     int bp = -999;	// Base pointer, for local variable access 
     int sp = -1;	// Stack top pointer
     int pc = 0;		// Program counter: next instruction
+    int hr = -1;
     for (;;) {
       if (trace) 
         printsppc(stack, bp, sp, program, pc);
@@ -109,9 +111,27 @@ class Machine {
           break;
         }
         case DIV:
-          stack[sp - 1] = binaryOperator(stack[sp-1], stack[sp], "/");
-          sp--;
-          break;
+            if(((IntType)stack[sp]).getValue()==0){
+                //System.out.println("hr:"+hr+" exception:"+1);
+                while (hr != -1 && ((IntType)stack[hr]).getValue() != 1 ){
+                    hr = ((IntType)stack[hr+2]).getValue();
+                    if(hr!=0){
+                        System.out.println("hr:"+hr+" exception:"+new IntType(program.get(pc)).getValue());
+					}
+                }
+                if (hr != -1) { 
+                    sp = hr-1;    
+                    pc = ((IntType)stack[hr+1]).getValue();
+                    hr = ((IntType)stack[hr+2]).getValue();    
+                } else {
+                    System.out.print(hr+"not find exception");
+                    return sp;
+                }
+            }else{
+                stack[sp - 1] = binaryOperator(stack[sp-1], stack[sp], "/");
+                sp--; 
+            }
+            break;
         case MOD:
           stack[sp - 1] = binaryOperator(stack[sp-1], stack[sp], "%");
           sp--;
@@ -219,6 +239,35 @@ class Machine {
           break;
         case STOP:
           return sp;
+        case PUSHHR:{
+            stack[++sp] = new IntType(program.get(pc++));    //exn
+            int tmp = sp;       //exn address
+            sp++;
+            stack[sp++] = new IntType(program.get(pc++));   //jump address
+            stack[sp] = new IntType(hr);
+            hr = tmp;
+            break;
+            }
+        case POPHR:
+            hr = ((IntType)stack[sp--]).getValue();sp-=2;break;
+        case THROW:
+            //System.out.println("hr:"+hr+" exception:"+new IntType(program.get(pc)).getValue());
+            while (hr != -1 && ((IntType)stack[hr]).getValue() != program.get(pc) ){
+                hr = ((IntType)stack[hr+2]).getValue(); //find exn address
+                if(hr!=0){
+                        System.out.println("hr:"+hr+" exception:"+new IntType(program.get(pc)).getValue());
+					}
+            }
+                        
+            if (hr != -1) { // Found a handler for exn
+                sp = hr-1;    // remove stack after hr
+                pc = ((IntType)stack[hr+1]).getValue();
+                hr = ((IntType)stack[hr+2]).getValue(); // with current handler being hr     
+            } else {
+                System.out.print(hr+"not find exception");
+                return sp;
+            }
+            break;
       default:                  
         throw new RuntimeException("Illegal instruction " + program.get(pc-1)
                                    + " at address " + (pc-1));

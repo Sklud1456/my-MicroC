@@ -16,7 +16,11 @@
 
 6.15 continue skd 
 
-do-while
+6.16 do-while lcy
 
-string
+6.17 try catch lcy 无finally
+
+6.25 switch 中default改进，try catch增加finally skd
+
+
 
