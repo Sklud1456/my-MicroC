@@ -20,7 +20,11 @@
 
 6.17 try catch lcy 无finally
 
-6.25 switch 中default改进，try catch增加finally skd
+6.25 switch 中default改进，try catch增加finally skd 
+
+6.26 增加 and or xor逻辑运算符 lcy
+
+
 
 
 

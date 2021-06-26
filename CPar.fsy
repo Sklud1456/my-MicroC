@@ -26,9 +26,9 @@ let third  (_, _, c) = c
 %token <char> CSTCHAR
 
 %token CHAR STRING ELSE IF INT FLOAT NULL PRINT PRINTLN RETURN VOID  
-%token WHILE DO FOR SWITCH CASE BREAK CONTINUE DEFAULT TRY CATCH THROW FINALLY
+%token WHILE DO FOR SWITCH CASE BREAK CONTINUE DEFAULT TRY CATCH THROW FINALLY PRINTF
 %token PLUS MINUS TIMES DIV MOD SELFPLUS SELFMINUS 
-%token EQ NE GT LT GE LE
+%token EQ NE GT LT GE LE AND OR XOR
 %token NOT SEQOR SEQAND
 %token LPAR RPAR LBRACE RBRACE LBRACK RBRACK SEMI COMMA ASSIGN AMP QUEST COLON  
 %token EOF
@@ -214,7 +214,11 @@ ExprNotAccess:
   | Expr LT    Expr                     { Prim2("<",  $1, $3)       }
   | Expr GE    Expr                     { Prim2(">=", $1, $3)       }
   | Expr LE    Expr                     { Prim2("<=", $1, $3)       }
+  | Expr AND   Expr                     { Prim2("and", $1, $3)       }
+  | Expr OR    Expr                     { Prim2("or", $1, $3)       }
+  | Expr XOR   Expr                     { Prim2("xor", $1, $3)       }
   | Expr QUEST Expr COLON Expr          { Prim3($1,$3,$5)           }
+  | PRINTF LPAR CSTSTRING COMMA Expr RPAR{ Printf($3, $5)       }
   | Expr SEQAND Expr                    { AndOperator($1, $3)       }
   | Expr SEQOR  Expr                    { OrOperator($1, $3)        }
 ;

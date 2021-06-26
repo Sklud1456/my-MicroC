@@ -23,6 +23,9 @@ type token =
   | LT
   | GE
   | LE
+  | AND
+  | OR
+  | XOR
   | PLUS
   | MINUS
   | TIMES
@@ -42,6 +45,7 @@ type token =
   | CATCH
   | THROW
   | FINALLY
+  | PRINTF
   | CHAR
   | STRING
   | ELSE
@@ -82,6 +86,9 @@ type tokenId =
     | TOKEN_LT
     | TOKEN_GE
     | TOKEN_LE
+    | TOKEN_AND
+    | TOKEN_OR
+    | TOKEN_XOR
     | TOKEN_PLUS
     | TOKEN_MINUS
     | TOKEN_TIMES
@@ -101,6 +108,7 @@ type tokenId =
     | TOKEN_CATCH
     | TOKEN_THROW
     | TOKEN_FINALLY
+    | TOKEN_PRINTF
     | TOKEN_CHAR
     | TOKEN_STRING
     | TOKEN_ELSE

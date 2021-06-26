@@ -40,7 +40,7 @@ class Machine {
     STOP = 25,
     CSTF =26, 
     CSTC =27,
-    THROW = 28,PUSHHR = 29,POPHR = 30;
+    THROW = 28,PUSHHR = 29,POPHR = 30,AND =31,OR=32,XOR=33;
 
 
   final static int STACKSIZE = 1000;
@@ -102,6 +102,21 @@ class Machine {
         }
         case SUB:{
           stack[sp - 1] = binaryOperator(stack[sp-1], stack[sp], "-");
+          sp--;
+          break;
+        }
+        case AND:{
+          stack[sp - 1] = binaryOperator(stack[sp-1], stack[sp], "and");
+          sp--;
+          break;
+        }
+        case OR:{
+          stack[sp - 1] = binaryOperator(stack[sp-1], stack[sp], "or");
+          sp--;
+          break;
+        }
+        case XOR:{
+          stack[sp - 1] = binaryOperator(stack[sp-1], stack[sp], "xor");
           sp--;
           break;
         }
@@ -309,6 +324,102 @@ class Machine {
         } else {
           result = new IntType(Integer.parseInt(String.valueOf(left)) - Integer.parseInt(String.valueOf(right)));
         }
+        break;
+      }
+      case "and":{
+        if (flag == 1) {
+            double l=Float.parseFloat(String.valueOf(left)); 
+            double r=Float.parseFloat(String.valueOf(right));
+            if(l==0){
+                result =  new IntType(0);
+		    }else if (r==0){
+                result =  new IntType(0);
+		    }
+            else{
+                result =  new IntType(1);
+		    }
+        } else {
+            int l=Integer.parseInt(String.valueOf(left)); 
+            int r=Integer.parseInt(String.valueOf(right));
+            if(l==0){
+                result = new IntType(0);
+		    }else if (r==0){
+                result =  new IntType(0);
+		    }
+            else{
+                result =  new IntType(1);
+		    }
+        }
+        break;
+      }
+      case "or":{
+        if (flag == 1) {
+            double l=Float.parseFloat(String.valueOf(left)); 
+            double r=Float.parseFloat(String.valueOf(right));
+            if(l==1){
+                result = new IntType(1);
+		    }else if (r==1){
+                result = new IntType(1);
+		    }
+            else{
+                result =  new IntType(0);  
+		    }
+        } else {
+            int l=Integer.parseInt(String.valueOf(left)); 
+            int r=Integer.parseInt(String.valueOf(right));
+            if(l==1){
+                result = new IntType(1);
+		    }else if (r==1){
+                result =  new IntType(1);
+		    }
+            else{
+                result =  new IntType(0);  
+		    }
+        }
+       
+        break;
+      }
+      case "xor":{
+        if (flag == 1) {
+            double l=Float.parseFloat(String.valueOf(left)); 
+            double r=Float.parseFloat(String.valueOf(right));
+            if(l==0){
+                if(r==0){
+                    result =  new IntType(0);
+			    }
+                else{
+                    result =  new IntType(1);
+			    }
+		    }
+            else{
+                if(r==0){
+                    result =  new IntType(0);
+			    }
+                else{
+                    result =  new IntType(1);
+			    } 
+		    }
+        } else {
+            int l=Integer.parseInt(String.valueOf(left)); 
+            int r=Integer.parseInt(String.valueOf(right));
+            if(l==0){
+                if(r==0){
+                    result =  new IntType(0);
+			    }
+                else{
+                    result =  new IntType(1);
+			    }
+		    }
+            else{
+                if(r==0){
+                    result =  new IntType(0);
+			    }
+                else{
+                    result =  new IntType(1);
+			    } 
+		    }
+        }
+        
         break;
       }
       case "*":{

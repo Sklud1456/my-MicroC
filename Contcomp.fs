@@ -401,6 +401,9 @@ and cExpr (e : expr) (varEnv : VarEnv) (funEnv : FunEnv)(labellist : LabelEnv) (
            (match ope with
             | "*"   -> MUL  :: C
             | "+"   -> ADD  :: C
+            | "and" -> AND  :: C
+            | "or"  -> OR   :: C
+            | "xor" -> XOR  :: C
             | "-"   -> SUB  :: C
             | "/"   -> DIV  :: C
             | "%"   -> MOD  :: C

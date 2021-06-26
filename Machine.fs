@@ -23,6 +23,9 @@ type instr =
   | GVAR of int                        (* global var     全局变量  x86     *) 
   | ADD                                (* addition                        *)
   | SUB                                (* subtraction                     *)
+  | AND 
+  | OR
+  | XOR  
   | MUL                                (* multiplication                  *)
   | DIV                                (* division                        *)
   | MOD                                (* modulus                         *)
@@ -46,6 +49,9 @@ type instr =
   | PRINTC                             (* print s[sp] as character        *)
   | LDARGS of int                             (* load command line args on stack *)
   | STOP                               (* halt the abstract machine       *)
+  | THROW of int
+  | PUSHHDLR of int * label
+  | POPHDLR
 
 (* Generate new distinct labels *)
 
@@ -178,6 +184,24 @@ let CODECSTF    = 26;
 [<Literal>]
 let CODECSTC    = 27;
 
+[<Literal>]
+let CODETHROW   = 28;
+
+[<Literal>]
+let CODEPUSHHR  = 29;
+
+[<Literal>]
+let CODEPOPHR   = 30;
+
+[<Literal>]
+let CODEAND   = 31;
+
+[<Literal>]
+let CODEOR   = 32;
+
+[<Literal>]
+let CODEXOR   = 33;
+
 
 
 
@@ -197,6 +221,9 @@ let makelabenv (addr, labenv) instr =
     | OFFSET i       -> (addr+2, labenv)
     | ADD            -> (addr+1, labenv)
     | SUB            -> (addr+1, labenv)
+    | AND            -> (addr+1, labenv)
+    | OR             -> (addr+1, labenv)
+    | XOR            -> (addr+1, labenv)
     | MUL            -> (addr+1, labenv)
     | DIV            -> (addr+1, labenv)
     | MOD            -> (addr+1, labenv)
@@ -220,6 +247,9 @@ let makelabenv (addr, labenv) instr =
     | PRINTC         -> (addr+1, labenv)
     | LDARGS  m       -> (addr+1, labenv)
     | STOP           -> (addr+1, labenv)
+    | THROW i           -> (addr+2, labenv)
+    | PUSHHDLR (exn ,lab) -> (addr+3, labenv)
+    | POPHDLR           -> (addr+1, labenv)
 
 (* Bytecode emission, second pass: output bytecode as integers *)
 
@@ -237,6 +267,9 @@ let rec emitints getlab instr ints =
     | OFFSET i       -> CODECSTI   :: i :: ints
     | ADD            -> CODEADD    :: ints
     | SUB            -> CODESUB    :: ints
+    | AND            -> CODEAND    :: ints
+    | OR             -> CODEOR     :: ints
+    | XOR            -> CODEXOR    :: ints
     | MUL            -> CODEMUL    :: ints
     | DIV            -> CODEDIV    :: ints
     | MOD            -> CODEMOD    :: ints
@@ -260,6 +293,9 @@ let rec emitints getlab instr ints =
     | PRINTC         -> CODEPRINTC :: ints
     | LDARGS m        -> CODELDARGS :: ints
     | STOP           -> CODESTOP   :: ints
+    | THROW i           -> CODETHROW    :: i            :: ints
+    | PUSHHDLR (exn, lab) -> CODEPUSHHR :: exn          :: getlab lab   :: ints
+    | POPHDLR           -> CODEPOPHR    :: ints
 
 
 (* Convert instruction list to int list in two passes:
@@ -294,6 +330,9 @@ let rec decomp ints : instr list =
     | []                                              ->  []
     | CODEADD :: ints_rest                         ->   ADD           :: decomp ints_rest
     | CODESUB    :: ints_rest                         ->   SUB           :: decomp ints_rest
+    | CODEAND    :: ints_rest                         ->   AND           :: decomp ints_rest
+    | CODEOR     :: ints_rest                         ->   OR            :: decomp ints_rest
+    | CODEXOR    :: ints_rest                         ->   XOR           :: decomp ints_rest
     | CODEMUL    :: ints_rest                         ->   MUL           :: decomp ints_rest
     | CODEDIV    :: ints_rest                         ->   DIV           :: decomp ints_rest
     | CODEMOD    :: ints_rest                         ->   MOD           :: decomp ints_rest

@@ -32,6 +32,7 @@ and expr =                              // 表达式，右值
   | AndOperator of expr * expr          (* Sequential and               *)
   | OrOperator of expr * expr           (* Sequential or                *)
   | CallOperator of string * expr list  (* Function call f(...)         *)
+  | Printf of string * expr
                                                                    
 and access =                         //左值，存储的位置                                            
   | AccVar of string                 (* Variable access        x    *) 
