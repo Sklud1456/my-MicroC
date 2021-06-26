@@ -26,6 +26,7 @@ let keyword s =
     | "float"       -> FLOAT
     | "null"        -> NULL
     | "print"       -> PRINT
+    | "printc"      -> PRINTC
     | "println"     -> PRINTLN
     | "return"      -> RETURN
     | "true"        -> CSTBOOL 1

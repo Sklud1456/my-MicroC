@@ -27,8 +27,10 @@
 
 module Interp
 
+open System.IO
 open Absyn
 open Debug
+
 
 (* Simple environment operations *)
 // 多态类型 env
@@ -217,7 +219,6 @@ let initEnvAndStore (topdecs: topdec list) : locEnv * funEnv * store =
         | Vardec (typ, x) :: decr ->
             let (locEnv1, sto1) = allocate (typ, x) locEnv store
             addv decr locEnv1 funEnv sto1
-
         //全局函数 将声明(f,(xs,body))添加到全局函数环境 funEnv
         | Fundec (_, f, xs, body) :: decr -> addv decr locEnv ((f, (xs, body)) :: funEnv) store
 
@@ -272,12 +273,54 @@ let rec exec stmt (locEnv: locEnv) (gloEnv: gloEnv) (store: store) : store =
 
         loop stmts (locEnv, store)
 
+    | Switch(e, body) ->
+        let (v, store0) = eval e locEnv gloEnv store
+        let rec everycases list = 
+            match list with
+            | Case(e1, body1) :: next -> 
+                let (v1, store1) = eval e1 locEnv gloEnv store0
+                if v1 = v then exec body1 locEnv gloEnv store1
+                          else everycases next
+            | Default(body) :: over ->
+                exec body locEnv gloEnv store0
+            | [Default(body)]->
+                exec body locEnv gloEnv store0
+            | [] -> store0
+            | _ -> store0
+        (everycases body)
+    | Case(e, body) -> exec body locEnv gloEnv store
+    | Default(body) -> exec body locEnv gloEnv store
+    | For (e1, e2, e3, body) ->
+       let (loc, store0) = eval e1 locEnv gloEnv store
+       let rec loop store1 =
+           let (v, store2) = eval e2 locEnv gloEnv store1
+           if v <> 0 then 
+               let (res2, store3) = eval e3 locEnv gloEnv (exec body locEnv gloEnv store2)
+               loop store3
+           else store2
+       loop store0
+    | Dowhile (body, e) ->
+        let rec loop store1 =
+            let (v, store2) = eval e locEnv gloEnv store1
+            if v <> 0 then
+                loop (exec body locEnv gloEnv store2)
+            else
+                store2
+
+        loop (exec body locEnv gloEnv store)
+    | Continue -> failwith "暂时没有实现，switch中可自行break"
+    | Break -> failwith "暂时没有实现，switch中可自行break"
     | Return _ -> failwith "return not implemented" // 解释器没有实现 return
 
 and stmtordec stmtordec locEnv gloEnv store =
     match stmtordec with
     | Stmt stmt -> (locEnv, exec stmt locEnv gloEnv store)
     | Dec (typ, x) -> allocate (typ, x) locEnv store
+    | DeclareAndAssign (typ, x, e) ->let (varenv1,store1) = allocate (typ, x) locEnv store
+                                     let (varenv2, store2) = access (AccVar x) varenv1 gloEnv store1
+                                     let (res, store4) = eval e varenv1 gloEnv store2
+                                     (varenv1, setSto store4 varenv2 res) 
+
 
 (* Evaluating micro-C expressions *)
 
@@ -291,26 +334,58 @@ and eval e locEnv gloEnv store : int * store =
         let (res, store2) = eval e locEnv gloEnv store1
         (res, setSto store2 loc res)
     | CstI i -> (i, store)
+    | ConstFloat i -> (System.BitConverter.SingleToInt32Bits(float32(i)), store)
+    | ConstChar i -> ((int32)(System.BitConverter.ToInt16((System.BitConverter.GetBytes(char(i))),0)), store)
     | Addr acc -> access acc locEnv gloEnv store
+    | Printf(op,e1)  -> 
+        let (i1, store1) = eval e1 locEnv gloEnv store
+        
+        let res = 
+            match op with
+            | "%c"   -> (printf "%c " (char (i1))
+                         i1)
+            | "%d"   -> (printf "%d " (int64 i1)
+                         i1)
+            | "%f"   -> (printf "%f " (System.BitConverter.Int32BitsToSingle(i1))
+                         i1)
+            | _      -> failwith ("unknown type" + op)
+        (res, store1)
+
     | Prim1 (ope, e1) ->
         let (i1, store1) = eval e1 locEnv gloEnv store
-
-        let res =
-            match ope with
-            | "!" -> if i1 = 0 then 1 else 0
-            | "printi" ->
-                (printf "%d " i1
-                 i1)
-            | "printc" ->
-                (printf "%c" (char i1)
-                 i1)
-            | _ -> failwith ("unknown primitive " + ope)
-
-        (res, store1)
+        let rec tmp stat =
+            match stat with
+            | Access (c) -> c
+        match ope with
+        | "!" ->if i1 = 0 then  
+                    i1=1
+                else  
+                    i1=0
+                (i1,store1)
+        | "++I" ->
+            let ass = Assign (tmp e1,Prim2 ("+",Access (tmp e1),CstI 1))
+            eval ass locEnv gloEnv store1
+        | "I++" -> 
+            let ass = Assign (tmp e1,Prim2 ("+",Access (tmp e1),CstI 1))
+            eval ass locEnv gloEnv store1
+        | "I--" -> 
+            let ass = Assign (tmp e1,Prim2 ("-",Access (tmp e1),CstI 1))
+            eval ass locEnv gloEnv store1
+        | "--I" -> 
+            let ass = Assign (tmp e1,Prim2 ("-",Access (tmp e1),CstI 1))
+            eval ass locEnv gloEnv store1
+        | "printi" -> 
+            (printf "%d "  i1
+             i1)
+            (i1,store1)
+        | "printc" -> 
+            (printf "%c " (char i1)
+             i1)
+            (i1,store1)
+        | _ -> failwith ("unknown primitive " + ope)
     | Prim2 (ope, e1, e2) ->
         let (i1, store1) = eval e1 locEnv gloEnv store
         let (i2, store2) = eval e2 locEnv gloEnv store1
-
         let res =
             match ope with
             | "*" -> i1 * i2
@@ -324,24 +399,35 @@ and eval e locEnv gloEnv store : int * store =
             | "<=" -> if i1 <= i2 then 1 else 0
             | ">=" -> if i1 >= i2 then 1 else 0
             | ">" -> if i1 > i2 then 1 else 0
+            | "and" -> if  i1 <> 0 && i2 <> 0 then 1 else 0
+            | "or" -> if  i1 = 0 || i2 = 0 then 1 else 0
+            | "xor" -> if  (i1 <> 0 && i2 <> 0) || (i1 = 0 && i2 = 0) then 1 else 0
             | _ -> failwith ("unknown primitive " + ope)
 
         (res, store2)
-    | Andalso (e1, e2) ->
+    
+    | Prim3(e1, e2, e3)    ->
+        let (i1, store1) = eval e1 locEnv gloEnv store
+        let (i2, store2) = eval e2 locEnv gloEnv store1
+        let (i3, store3) = eval e3 locEnv gloEnv store2
+
+        if(i1 <> 0) then (i2, store3)
+                    else (i3, store3)
+    | AndOperator (e1, e2) ->
         let (i1, store1) as res = eval e1 locEnv gloEnv store
 
         if i1 <> 0 then
             eval e2 locEnv gloEnv store1
         else
             res
-    | Orelse (e1, e2) ->
+    | OrOperator (e1, e2) ->
         let (i1, store1) as res = eval e1 locEnv gloEnv store
 
         if i1 <> 0 then
             res
         else
             eval e2 locEnv gloEnv store1
-    | Call (f, es) -> callfun f es locEnv gloEnv store
+    | CallOperator (f, es) -> callfun f es locEnv gloEnv store
 
 and access acc locEnv gloEnv store : int * store =
     match acc with

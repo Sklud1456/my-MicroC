@@ -55,6 +55,7 @@ type token =
   | NULL
   | PRINT
   | PRINTLN
+  | PRINTC
   | RETURN
   | VOID
   | CSTCHAR of (char)
@@ -118,6 +119,7 @@ type tokenId =
     | TOKEN_NULL
     | TOKEN_PRINT
     | TOKEN_PRINTLN
+    | TOKEN_PRINTC
     | TOKEN_RETURN
     | TOKEN_VOID
     | TOKEN_CSTCHAR
