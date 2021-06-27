@@ -280,7 +280,7 @@ let rec cStmt stmt (varEnv : VarEnv) (funEnv : FunEnv) (labellist : LabelEnv)(C 
         let rec lookupExn e1 (es:IException list) exdepth=
             match es with
             | hd :: tail -> if e1 = hd then exdepth else lookupExn e1 tail exdepth+1
-            | []-> -1
+            | []-> -2
         let (labelend, C1) = addLabel C
         let labellist = labelend :: labellist
         let (env,fdepth) = varEnv

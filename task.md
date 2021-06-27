@@ -18,7 +18,7 @@
 
 6.16 do-while lcy
 
-6.17 try catch lcy 无finally
+6.17 try catch skd 无finally
 
 6.25 switch 中default改进，try catch增加finally skd 
 

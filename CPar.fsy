@@ -200,6 +200,7 @@ ExprNotAccess:
   | PRINT Expr                          { Prim1("printi", $2)       }
   | PRINTC Expr                         { Prim1("printc", $2)       }
   | PRINTLN                             { Prim1("printc", nl)       }
+  | PRINTF LPAR CSTSTRING COMMA Expr RPAR{ Printf($3, $5)       }
   | Expr SELFPLUS                       { Prim1("I++", $1)     }
   | Expr SELFMINUS                      { Prim1("I--", $1)     }
   | SELFPLUS Expr                       { Prim1("++I", $2)     }
@@ -219,7 +220,6 @@ ExprNotAccess:
   | Expr OR    Expr                     { Prim2("or", $1, $3)       }
   | Expr XOR   Expr                     { Prim2("xor", $1, $3)       }
   | Expr QUEST Expr COLON Expr          { Prim3($1,$3,$5)           }
-  | PRINTF LPAR CSTSTRING COMMA Expr RPAR{ Printf($3, $5)       }
   | Expr SEQAND Expr                    { AndOperator($1, $3)       }
   | Expr SEQOR  Expr                    { OrOperator($1, $3)        }
 ;
